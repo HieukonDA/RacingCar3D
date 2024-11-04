@@ -63,6 +63,7 @@ public class CarController : MonoBehaviour
     {
         GetInputs();
         CalculateCarMovement();
+        CalculateCarSteering();
     }
 
     void GetInputs()
@@ -95,12 +96,19 @@ public class CarController : MonoBehaviour
             ReleaseBrake();
 
             if(carSpeedConverted < maximumSpeed)
-                motorTorque = maximumMotorTorque * vertical;
+                motorTorque = maximumMotorTorque * -vertical;
             else
                 motorTorque = 0f;
         }
 
         ApplyMotorTorque();
+    }
+
+    void CalculateCarSteering()
+    {
+        tireAngle = maximumSteeringAngle * horizontal;
+        FrontWheelLeftCollider.steerAngle = tireAngle;
+        FrontWheelRightCollider.steerAngle = tireAngle;
     }
 
     void ApplyMotorTorque()
