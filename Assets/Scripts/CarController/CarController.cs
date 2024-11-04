@@ -1,3 +1,4 @@
+using System.IO.Enumeration;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -49,6 +50,11 @@ public class CarController : MonoBehaviour
     bool handBrake = false;
     Rigidbody carRigidbody;
 
+    [Header("Sounds & Effects")]
+    public ParticleSystem[] smokeEffects;
+    private bool smokeEffectEnabled = true;
+    public TrailRenderer[] trailRenderers;
+
     void Start()
     {
         carRigidbody = GetComponent<Rigidbody>();
@@ -92,6 +98,12 @@ public class CarController : MonoBehaviour
         {
             motorTorque = 0f;
             ApplyBrake();
+            EnableTrailEffect(true);
+            if(!smokeEffectEnabled)
+            {
+                EnableSmokeEffect(true);
+                smokeEffectEnabled = true;
+            }
         }
         else
         {
@@ -101,6 +113,13 @@ public class CarController : MonoBehaviour
                 motorTorque = maximumMotorTorque * -vertical;
             else
                 motorTorque = 0f;
+
+            EnableTrailEffect(false);
+            if(smokeEffectEnabled)
+            {
+                EnableSmokeEffect(false);
+                smokeEffectEnabled = false;
+            }
         }
 
         ApplyMotorTorque();
@@ -173,6 +192,29 @@ public class CarController : MonoBehaviour
         BackWheelRightCollider.GetWorldPose(out position, out rotation);
         BackWheelRight.transform.position = position;
         BackWheelRight.transform.rotation = rotation;
+    }
+
+    private void EnableSmokeEffect(bool enable)
+    {
+        foreach(ParticleSystem smokeEffect in smokeEffects)
+        {
+            if(enable)
+            {
+                smokeEffect.Play();
+            }
+            else
+            {
+                smokeEffect.Stop();
+            }
+        }
+    }
+
+    private void EnableTrailEffect(bool enable)
+    {
+        foreach(TrailRenderer trailRenderer in trailRenderers)
+        {
+            trailRenderer.emitting = enable;
+        }
     }
 
 
