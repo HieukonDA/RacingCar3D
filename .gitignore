@@ -70,3 +70,8 @@ crashlytics-build.properties
 # Temporary auto-generated Android Assets
 /[Aa]ssets/[Ss]treamingAssets/aa.meta
 /[Aa]ssets/[Ss]treamingAssets/aa/*
+# Ignore large texture files
+Assets/ImportAssets/CartoonTracksPack1/Track1/Textures/road.psd
+Assets/ImportAssets/CartoonTracksPack1/Track1/Textures/road_normal.png
+Assets/ImportAssets/CartoonTracksPack1/Track1/Textures/garages.psd
+
