@@ -1,0 +1,5 @@
+# Đảm bảo LF cho các hệ điều hành Unix
+* text=auto
+*.json text
+*.cs text
+*.unity text
