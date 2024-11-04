@@ -64,6 +64,8 @@ public class CarController : MonoBehaviour
         GetInputs();
         CalculateCarMovement();
         CalculateCarSteering();
+
+        ApplyTransformToWheels();
     }
 
     void GetInputs()
@@ -151,7 +153,27 @@ public class CarController : MonoBehaviour
         BackWheelRightCollider.brakeTorque = 0;
     }
 
+    public void ApplyTransformToWheels()
+    {
+        Vector3 position;
+        Quaternion rotation;
 
+        FrontWheelLeftCollider.GetWorldPose(out position, out rotation);
+        FrontWheelLeft.transform.position = position;
+        FrontWheelLeft.transform.rotation = rotation;
+
+        FrontWheelRightCollider.GetWorldPose(out position, out rotation);
+        FrontWheelRight.transform.position = position;
+        FrontWheelRight.transform.rotation = rotation;
+
+        BackWheelLeftCollider.GetWorldPose(out position, out rotation);
+        BackWheelLeft.transform.position = position;
+        BackWheelLeft.transform.rotation = rotation;
+
+        BackWheelRightCollider.GetWorldPose(out position, out rotation);
+        BackWheelRight.transform.position = position;
+        BackWheelRight.transform.rotation = rotation;
+    }
 
 
 }
