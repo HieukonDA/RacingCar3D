@@ -55,6 +55,9 @@ public class CarController : MonoBehaviour
     private bool smokeEffectEnabled = true;
     public TrailRenderer[] trailRenderers;
 
+    public AudioSource engineSound;
+    public AudioClip engineClip;
+
     void Start()
     {
         carRigidbody = GetComponent<Rigidbody>();
@@ -63,6 +66,14 @@ public class CarController : MonoBehaviour
         {
             carRigidbody.centerOfMass = COM.localPosition;
         }
+
+        engineSound.loop = true;
+        engineSound.playOnAwake = false;
+        engineSound.volume = 0.5f;
+        engineSound.pitch = 1f;
+
+        engineSound.Play();
+        engineSound.Pause();
     }
 
     void Update()
@@ -119,6 +130,27 @@ public class CarController : MonoBehaviour
             {
                 EnableSmokeEffect(false);
                 smokeEffectEnabled = false;
+            }
+
+            if(carSpeedConverted > 0 || handBrake)
+            {
+                engineSound.UnPause();
+
+                float gearRatio = currentSpeed / maximumSpeed;
+                int numberOfGears = 6;
+                int currentGear = Mathf.Clamp(Mathf.FloorToInt(gearRatio * (numberOfGears)) + 1, 1, numberOfGears);
+
+                float pitchMutiplier = 0.5f + 0.5f * (currentSpeed / maximumSpeed);
+                float volumeMultiplier = 0.2f + 0.8f * (currentSpeed / maximumSpeed);
+
+                engineSound.pitch = Mathf.Lerp(0.5f, 1.0f, pitchMutiplier) * currentGear;
+                engineSound.volume = volumeMultiplier;
+            }
+            else
+            {
+                engineSound.UnPause();
+                engineSound.pitch = 0.5f;
+                engineSound.volume = 0.2f;
             }
         }
 
@@ -216,6 +248,8 @@ public class CarController : MonoBehaviour
             trailRenderer.emitting = enable;
         }
     }
+
+
 
 
 }
