@@ -4,16 +4,16 @@ using System.Collections.Generic;
 using UnityEngine;
 using System;
 using Unity.Networking.Transport;
-using Unity.Collections;
+using Unity.Collections; 
 
 public class Server : MonoBehaviour
 {
     public bool RunLocal;
     public NetworkDriver networkDriver;
     private NativeList<NetworkConnection> connections;
-    const int numEnemies = 12;
-    private byte[] enemyStatus;
     private int numPlayers = 0;
+    private List<Vector3> playerPositions = new List<Vector3>();
+    private List<float> playerSpeeds = new List<float>();
 
     void StartServer()
     {
@@ -34,18 +34,18 @@ public class Server : MonoBehaviour
 
         connections = new NativeList<NetworkConnection>(16, Allocator.Persistent);
 
-        enemyStatus = new byte[numEnemies];
-        for(int i =  0; i < numEnemies; i++)
-        {
-            enemyStatus[i] = 1;
-        }
-
     }
 
     void OnDestroy()
     {
-        networkDriver.Dispose();
-        connections.Dispose();
+        if (networkDriver.IsCreated)
+        {
+            networkDriver.Dispose();
+        }
+        if (connections.IsCreated)
+        {
+            connections.Dispose();
+        }
     }
 
     void Start()
@@ -79,6 +79,8 @@ public class Server : MonoBehaviour
         while((c = networkDriver.Accept() ) != default(NetworkConnection))
         {
             connections.Add(c);
+            playerPositions.Add(new Vector3(0,0,0));
+            playerSpeeds.Add(0f);
             Debug.Log("Accepted a connection");
             numPlayers++;
         }
@@ -96,35 +98,33 @@ public class Server : MonoBehaviour
             {
                 if( cmd == NetworkEvent.Type.Data)
                 {
-                    uint number = stream.ReadUInt();
-                    //check that the number of enemies
-                    if(number == numEnemies)
-                    {
-                        for(int b = 0; b < numEnemies; b++)
-                        {
-                            byte isAlive = stream.ReadByte();
-                            if(isAlive == 0 && enemyStatus[b] > 0)
-                            {
-                                Debug.Log("Enemy " + b + " is dead" +1);
-                                enemyStatus[b] = 0;
-                            }
-                        }
-                    }
+                    float posX = stream.ReadFloat();
+                    float posY = stream.ReadFloat();
+                    float posZ = stream.ReadFloat();
+                    float speed = stream.ReadFloat();
+                    
+                    playerPositions[i] = new Vector3(posX, posY, posZ);
+                    playerSpeeds[i] = speed;
                 }
                 else if( cmd == NetworkEvent.Type.Disconnect)
                 {
                     Debug.Log("Client disconnected from server");
                     connections[i] = default(NetworkConnection);
+                    playerPositions.RemoveAt(i);
+                    playerSpeeds.RemoveAt(i);
                     numPlayers--;
                 }
             }
 
             // broadcast Game State
             networkDriver.BeginSend( NetworkPipeline.Null, connections[i], out var writer);
-            writer.WriteUInt( numEnemies);
-            for(int b = 0; b < numEnemies; b++)
+            writer.WriteUInt( (uint)numPlayers);
+            for(int j = 0; j < numPlayers; j++)
             {    
-                writer.WriteByte(enemyStatus[b]);
+                 writer.WriteFloat(playerPositions[j].x);
+                writer.WriteFloat(playerPositions[j].y);
+                writer.WriteFloat(playerPositions[j].z);
+                writer.WriteFloat(playerSpeeds[j]);
             }    
             networkDriver.EndSend(writer);           
         }
