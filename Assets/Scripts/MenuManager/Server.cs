@@ -1,10 +1,9 @@
-
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using System;
 using Unity.Networking.Transport;
-using Unity.Collections; 
+using Unity.Collections;
 
 public class Server : MonoBehaviour
 {
@@ -12,17 +11,16 @@ public class Server : MonoBehaviour
     public NetworkDriver networkDriver;
     private NativeList<NetworkConnection> connections;
     private int numPlayers = 0;
-    private List<Vector3> playerPositions = new List<Vector3>();
-    private List<float> playerSpeeds = new List<float>();
+
+    private Dictionary<int, Vector3> playerPositions = new Dictionary<int, Vector3>(); // Lưu trữ vị trí của các player
 
     void StartServer()
     {
-        Debug.Log("Starting server");
+        Debug.Log("Starting Server");
 
-        //start transport server
         networkDriver = NetworkDriver.Create();
         var endpoint = NetworkEndPoint.AnyIpv4;
-        endpoint.Port = 7777;
+        endpoint.Port = 8888;
         if (networkDriver.Bind(endpoint) != 0)
         {
             Debug.Log("Failed to bind to port " + endpoint.Port);
@@ -33,16 +31,15 @@ public class Server : MonoBehaviour
         }
 
         connections = new NativeList<NetworkConnection>(16, Allocator.Persistent);
-
     }
 
     void OnDestroy()
     {
-        if (networkDriver.IsCreated)
+        if(networkDriver.IsCreated)
         {
             networkDriver.Dispose();
         }
-        if (connections.IsCreated)
+        if(connections.IsCreated)
         {
             connections.Dispose();
         }
@@ -52,11 +49,11 @@ public class Server : MonoBehaviour
     {
         if (RunLocal)
         {
-            StartServer();
+            StartServer(); // Run the server locally
         }
         else
         {
-            //todo: start from playfab configuration
+            // TODO: Start from PlayFab configuration
         }
     }
 
@@ -64,69 +61,49 @@ public class Server : MonoBehaviour
     {
         networkDriver.ScheduleUpdate().Complete();
 
-        //client up connection
-        for(int i = 0; i < connections.Length; i++)
-        {
-            if( !connections[i].IsCreated)
-            {
-                connections.RemoveAtSwapBack(i);
-                --i;
-            }
-        }
-
-        //accept new connection
-        NetworkConnection c;
-        while((c = networkDriver.Accept() ) != default(NetworkConnection))
-        {
-            connections.Add(c);
-            playerPositions.Add(new Vector3(0,0,0));
-            playerSpeeds.Add(0f);
-            Debug.Log("Accepted a connection");
-            numPlayers++;
-        }
-
-        DataStreamReader stream;
         for (int i = 0; i < connections.Length; i++)
         {
-            if(!connections[i].IsCreated)
+            if (!connections[i].IsCreated)
             {
                 continue;
             }
 
             NetworkEvent.Type cmd;
-            while( (cmd = networkDriver.PopEventForConnection( connections[i],out stream)) != NetworkEvent.Type.Empty)
+            DataStreamReader stream;
+            while ((cmd = networkDriver.PopEventForConnection(connections[i], out stream)) != NetworkEvent.Type.Empty)
             {
-                if( cmd == NetworkEvent.Type.Data)
+                if (cmd == NetworkEvent.Type.Data)
                 {
-                    float posX = stream.ReadFloat();
-                    float posY = stream.ReadFloat();
-                    float posZ = stream.ReadFloat();
-                    float speed = stream.ReadFloat();
-                    
-                    playerPositions[i] = new Vector3(posX, posY, posZ);
-                    playerSpeeds[i] = speed;
+                    int playerId = stream.ReadInt(); // Nhận playerId từ client
+                    float x = stream.ReadFloat();
+                    float y = stream.ReadFloat();
+                    float z = stream.ReadFloat();
+
+                    Debug.Log("Received data from player " + playerId + ": " + new Vector3(x, y, z));
+
+                    playerPositions[playerId] = new Vector3(x, y, z);
                 }
-                else if( cmd == NetworkEvent.Type.Disconnect)
+                else if (cmd == NetworkEvent.Type.Disconnect)
                 {
                     Debug.Log("Client disconnected from server");
                     connections[i] = default(NetworkConnection);
-                    playerPositions.RemoveAt(i);
-                    playerSpeeds.RemoveAt(i);
                     numPlayers--;
                 }
             }
 
-            // broadcast Game State
-            networkDriver.BeginSend( NetworkPipeline.Null, connections[i], out var writer);
-            writer.WriteUInt( (uint)numPlayers);
-            for(int j = 0; j < numPlayers; j++)
-            {    
-                 writer.WriteFloat(playerPositions[j].x);
-                writer.WriteFloat(playerPositions[j].y);
-                writer.WriteFloat(playerPositions[j].z);
-                writer.WriteFloat(playerSpeeds[j]);
-            }    
-            networkDriver.EndSend(writer);           
+            // Gửi vị trí của tất cả các player cho tất cả các client
+            networkDriver.BeginSend(NetworkPipeline.Null, connections[i], out var writer);
+            writer.WriteInt(numPlayers);
+            foreach (var kvp in playerPositions)
+            {
+                writer.WriteInt(kvp.Key); // Gửi playerId
+                writer.WriteFloat(kvp.Value.x);
+                writer.WriteFloat(kvp.Value.y);
+                writer.WriteFloat(kvp.Value.z);
+            }
+            networkDriver.EndSend(writer);
+
+            Debug.Log("Sent positions to client " + i);
         }
     }
 }
